@@ -88,90 +88,18 @@ output.
 
 ### Comparison table
 
-  -----------------------------------------------------------------------------------------
-  Command                      Feature tested bash (Linux)   xv6 shell       Explanation
-  ---------------------------- -------------- -------------- --------------- --------------
-  `echo hello > f ; cat < f`   Output and     Prints `hello` Expected to     Both shells
-                               input          from `cat`     print `hello`   support basic
-                               redirection                                   redirection
-                                                                             and command
-                                                                             sequencing.
-
-  `ls \| grep READ`            Pipe           Prints         Expected to     Both shells
-                                              matching lines print matching  support
-                                              containing     output if the   pipelines.
-                                              `READ`, such   file exists and 
-                                              as `README`    both commands   
-                                                             are available   
-
-  `(echo a; echo b) \| wc`     Grouping and   Prints a count The xv6 shell   Bash supports
-                               command list   for the two    does not        grouping
-                                              lines          support         syntax beyond
-                                                             bash-style      xv6's small
-                                                             parenthesized   set of command
-                                                             command         forms.
-                                                             grouping;       
-                                                             record the      
-                                                             actual          
-                                                             parse/error     
-                                                             output          
-
-  `echo one ; echo two`        Sequence       Prints `one`   Prints `one`    `;` separates
-                                              and then `two` and then `two`  commands that
-                                                                             run in
-                                                                             sequence.
-
-  `echo bg &`                  Background     Starts the     Supports        `&` marks a
-                               execution      command in the background      command for
-                                              background and execution using background
-                                              returns a      `&`; record the execution,
-                                              prompt         prompt/output   though bash
-                                                             observed        provides
-                                                                             richer job
-                                                                             control.
-
-  `ls *`                       Filename       Expands `*` to Normally passes Bash performs
-                               globbing       matching names `*` literally;  wildcard
-                                              in the current `ls` then       expansion;
-                                              directory      treats it as a  xv6's shell
-                                                             filename        does not
-                                                                             implement it.
-
-  `echo $HOME`                 Variable       Prints the     Prints `$HOME`  Bash expands
-                               expansion      value of       literally       environment
-                                              `HOME`         unless the      variables;
-                                                             shell           xv6's shell
-                                                             implements      does not
-                                                             variable        provide
-                                                             expansion       bash-style
-                                                                             expansion.
-
-  `echo "a b"`                 Quotes         Prints `a b`   Prints `a b` as Both shells
-                                              as one         one argument    handle quotes
-                                              argument                       sufficiently
-                                                                             to preserve
-                                                                             the space
-                                                                             within one
-                                                                             argument.
-
-  `mkdir d ; cd d ; ls ..`     `PATH` and     Runs `ls` and  `ls` may fail   xv6 user
-                               current        lists the      after changing  programs are
-                               directory      parent         directory       located at the
-                                              directory      because xv6     filesystem
-                                                             does not search root, so
-                                                             a `PATH` like   specifying
-                                                             bash; use       `/ls` can run
-                                                             `/ls ..` from   the program by
-                                                             inside `d`      its path.
-
-  Up arrow, Tab, Ctrl+R        History and    Bash supports  These           Bash includes
-                               completion     command        interactive     line-editing
-                                              history,       features are    conveniences
-                                              completion and not provided by that are
-                                              reverse        the basic xv6   absent from
-                                              history search shell           the small xv6
-                                                                             shell.
-  -----------------------------------------------------------------------------------------
+| Command | Feature tested | bash (Linux) | xv6 shell | Explanation |
+|---|---|---|---|---|
+| `echo hello > f ; cat < f` | Output and input redirection | Prints `hello` from `cat` | Prints `hello` | Both shells support basic redirection and command sequencing. |
+| `ls \| grep READ` | Pipe | Prints matching lines containing `READ`, such as `README` | Prints matching output if the file exists and both commands are available | Both shells support pipelines. |
+| `(echo a; echo b) \| wc` | Grouping and command list | Prints a count for the two lines | The xv6 shell does not support bash-style parenthesized command grouping; record the actual parse/error output | Bash supports grouping syntax beyond xv6's small set of command forms. |
+| `echo one ; echo two` | Sequence | Prints `one` and then `two` | Prints `one` and then `two` | `;` separates commands that run in sequence. |
+| `echo bg &` | Background execution | Starts the command in the background and returns a prompt | Supports background execution using `&`; record prompt/output observed | `&` marks a command for background execution, though bash provides richer job control. |
+| `ls *` | Filename globbing | Expands `*` to matching names in the current directory | Normally passes `*` literally; `ls` then treats it as a filename | Bash performs wildcard expansion; xv6's shell does not implement it. |
+| `echo $HOME` | Variable expansion | Prints the value of `HOME` | Prints `$HOME` literally unless the shell implements variable expansion | Bash expands environment variables; xv6's shell does not provide bash-style expansion. |
+| `echo "a b"` | Quotes | Prints `a b` as one argument | Prints `a b` as one argument | Both shells handle quotes sufficiently to preserve the space within one argument. |
+| `mkdir d ; cd d ; ls ..` | `PATH` and current directory | Runs `ls` and lists the parent directory | `ls` may fail after changing directory because xv6 does not search a `PATH` like bash; use `/ls ..` from inside `d` | xv6 user programs are located at the filesystem root, so specifying `/ls` can run the program by its path. |
+| Up arrow, Tab, Ctrl+R | History and completion | Bash supports command history, completion and reverse history search | These interactive features are not provided by the basic xv6 shell | Bash includes line-editing conveniences that are absent from the small xv6 shell. |
 
 ### Observe
 
@@ -262,7 +190,7 @@ The extra spaces between words are treated as separators. They do not
 create empty arguments. The program receives `one`, `two`, and `three`
 as separate arguments, in addition to `argv[0]`.
 
-Expected argument structure:
+Argument structure:
 
 ``` text
 argc = 4
