@@ -77,11 +77,6 @@ The first command waits for the requested number of ticks. The second
 command prints a usage message because the argument is missing and exits
 with an error status.
 
-**Screenshots**
-
--   Figure 1.1 -- The `grep` result in `user/user.h`.
--   Figure 1.2 -- The updated `sleep.c`.
--   Figure 1.3 -- `sleep` running in xv6, with and without an argument.
 
 ## Part 2. bash versus the xv6 shell
 
@@ -207,13 +202,6 @@ every name. A simple feature such as environment-variable expansion or a
 small improvement to command-line editing may be easier to add than full
 job control. The exact implementation difficulty depends on the feature
 and the existing shell code.
-
-**Screenshots**
-
--   Figure 2.1 -- The commands run in bash.
--   Figure 2.2 -- The same commands run in xv6.
--   Figure 2.3 -- `ls` failing after `cd d`, followed by the working
-    absolute-path alternative.
 
 ## Part 3. Who expands `*`? A program that prints its argv
 
@@ -360,11 +348,6 @@ Unquoted runs of spaces separate words; they do not create empty
 arguments. The shell passes the three words as three separate arguments
 after the program name.
 
-**Screenshots**
-
--   Figure 3.1 -- `args.c` and the `UPROGS` line.
--   Figure 3.2 -- `args` output in xv6.
--   Figure 3.3 -- `args_linux` output in bash.
 
 ## Part 4. Read the shell
 
@@ -427,12 +410,6 @@ globbing for `*` or environment-variable expansion for `$`. Therefore,
 those characters are generally passed as ordinary argument text instead
 of being expanded before a program runs. This explains the differences
 observed in Part 2 and the argument-printing tests in Part 3.
-
-**Screenshots**
-
--   Figure 4.1 -- The command kinds defined in `sh.c`.
--   Figure 4.2 -- Where each command kind is run.
--   Figure 4.3 -- The code that handles `cd`.
 
 ## Conclusion
 
