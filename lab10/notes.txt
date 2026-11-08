@@ -1,0 +1,149 @@
+OS Lab 10 - Add Your Own System Call: trace (xv6)
+==================================================
+
+Check 2: trace works
+--------------------
+$ trace 32 grep hello README
+8: syscall read -> 1023
+8: syscall read -> 965
+8: syscall read -> 453
+8: syscall read -> 0
+
+(1023 + 965 + 453 = 2441, the size of README, then 0 for end of file.)
+
+
+3.1 All the calls (all bits on)
+-------------------------------
+$ trace 2147483647 grep hello README
+12: syscall trace -> 0
+12: syscall exec -> 3
+12: syscall open -> 3
+12: syscall read -> 1023
+12: syscall read -> 965
+12: syscall read -> 453
+12: syscall read -> 0
+12: syscall close -> 0
+
+
+3.2 Only fork (bit 1, mask 2)
+-----------------------------
+$ trace 2 usertests forkforkfork
+usertests starting
+test forkforkfork: 14: syscall fork -> 15
+15: syscall fork -> 16
+16: syscall fork -> 17
+16: syscall fork -> 18
+16: syscall fork -> 19
+16: syscall fork -> 20
+16: syscall fork -> 21
+16: syscall fork -> 22
+16: syscall fork -> 23
+16: syscall fork -> 24
+16: syscall fork -> 25
+17: syscall fork -> 26
+17: syscall fork -> 27
+16: syscall fork -> 28
+16: syscall fork -> 29
+16: syscall fork -> 30
+17: syscall fork -> 31
+18: syscall fork -> 32
+16: syscall fork -> 33
+17: syscall fork -> 34
+17: syscall fork -> 35
+17: syscall fork -> 36
+16: syscall fork -> 37
+17: syscall fork -> 38
+17: syscall fork -> 39
+16: syscall fork -> 40
+17: syscall fork -> 41
+16: syscall fork -> 42
+16: syscall fork -> 43
+17: syscall fork -> 44
+16: syscall fork -> 45
+16: syscall fork -> 46
+16: syscall fork -> 47
+17: syscall fork -> 48
+17: syscall fork -> 49
+17: syscall fork -> 50
+17: syscall fork -> 51
+17: syscall fork -> 52
+17: syscall fork -> 53
+16: syscall fork -> 54
+16: syscall fork -> 55
+16: syscall fork -> 56
+17: syscall fork -> 57
+16: syscall fork -> 58
+16: syscall fork -> 59
+16: syscall fork -> 60
+17: syscall fork -> 61
+16: syscall fork -> 62
+16: syscall fork -> 63
+17: syscall fork -> 64
+17: syscall fork -> 65
+17: syscall fork -> 66
+16: syscall fork -> 67
+16: syscall fork -> 68
+17: syscall fork -> 69
+18: syscall fork -> 70
+16: syscall fork -> 71
+68: syscall fork -> 72
+68: syscall fork -> 73
+16: syscall fork -> 74
+17: syscall fork -> 75
+17: syscall fork -> -1
+16: syscall fork -> -1
+18: syscall fork -> -1
+OK
+ALL TESTS PASSED
+
+(The pids differ from the sheet because earlier processes already used
+some pids, and the xv6 runs with 3 CPUs, so the order of the lines is
+a scheduling race. The -1 lines are fork failing when the process table
+is full.)
+
+
+3.3 Only write (bit 16, mask 65536)
+-----------------------------------
+$ trace 65536 echo hi
+hi13: syscall write -> 2
+
+13: syscall write -> 1
+
+
+Observe
+-------
+
+1. In "trace 32 grep hello README" why do you see only read, and not
+   open or close?
+
+   Mask 32 = 2^5, so only bit 5 is on, and 5 is SYS_read. The kernel
+   prints a call only if (mask >> num) & 1 is true. For open (15) and
+   close (21) that bit is 0, so grep still calls them, but they are
+   not traced.
+
+2. In forkforkfork, three different pids print lines. Which line of code
+   from Part 2 makes that possible?
+
+   np->trace_mask = p->trace_mask; in fork() in kernel/proc.c (step 2.5).
+   trace sets the mask on itself and then exec keeps it for usertests.
+   Every fork copies the parent's mask into the child, so the children
+   (and their children) are traced too. Without this line only the first
+   process would print, because the children would start with mask 0.
+
+3. In "trace 65536 echo hi" the trace line is printed between "hi" and
+   the new line. Why? (How many times does echo call write?)
+
+   echo calls write twice: once for "hi" (2 bytes, returns 2) and once
+   for the newline (1 byte, returns 1). The kernel prints the trace line
+   right after each call returns, so the first trace line appears
+   directly after "hi" and before the "\n" is written. That is also
+   where the blank line comes from.
+
+4. Which mask traces both open (15) and close (21), and nothing else?
+
+   2^15 + 2^21 = 32768 + 2097152 = 2129920.
+
+   Check:
+   $ trace 2129920 grep hello README
+   77: syscall open -> 3
+   77: syscall close -> 0
