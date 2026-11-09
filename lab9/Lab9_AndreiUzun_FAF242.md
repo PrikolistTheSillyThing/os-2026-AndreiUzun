@@ -9,7 +9,7 @@
 
 ## 1. Goal
 
-In the lecture we crossed the door between a program and the kernel: the system call. In this lab I watched that door with `strace`, which prints every system call a program makes. First I read the calls of a real command (`ls -l`). Then I wrote a small C program that uses `open`, `write` and `read` directly, and watched its calls.
+In the lecture we crossed the door between a program and the kernel: the system call. In this lab I watched that door with `strace`, which prints every system call a program makes. First I read the calls of a real command (`ls -l`). Then I wrote a small C program that uses `open`, `write` and `read` directly, and watched its calls. Finally I counted how many times one single kind of call is made.
 
 Environment: Ubuntu (VirtualBox), `strace` 6.19 (already installed, checked with `sudo apt install strace`), `gcc` for the C program.
 
@@ -72,7 +72,7 @@ $ strace -f ls -l 2>&1 >/dev/null | wc -l
 288
 ```
 
-So one simple `ls -l` makes roughly 288 system calls (the count includes the final `+++ exited with 0 +++` line). Most of them are not the "real work" of listing a directory: they are the setup of the process (loading the libraries, mapping memory) before `ls` does anything useful.
+So the trace of one simple `ls -l` is 288 lines long. This is only a rough measure of the number of calls, because the lines also include things that are not calls (like the final `+++ exited with 0 +++`). The exact count from `strace -c` in Part 3 is 270 calls. Most of them are not the "real work" of listing a directory: they are the setup of the process (loading the libraries, mapping memory) before `ls` does anything useful. Note that this number counts calls of all kinds together; counting one single kind is done in Part 3.
 
 ### Observe
 
@@ -190,8 +190,62 @@ Descriptors 0, 1 and 2 are already open when the program starts: 0 is the standa
 
 ---
 
-## 4. Conclusion
+## 4. Part 3: counting one kind of call
 
-In this lab I watched the boundary between a program and the kernel with `strace`. For a real command (`ls -l`) I saw that about 288 system calls are made, most of them just loading libraries, and that the screen output is a single `write` to descriptor 1. With my own program I saw how C calls become system calls: `open` is implemented as `openat`, `write`, `read` and `close` keep their names, and `printf` is a `write(1, ...)` underneath.
+In Part 1 I counted the lines of the whole trace, so all kinds of calls together. Here I count only one kind: `openat`. I filter the trace with `-e trace=openat`, so strace records only that call, and write it to a file with `-o` so it is not mixed with the output of `ls`:
+
+```
+$ strace -f -e trace=openat -o trace.txt ls -l > /dev/null
+$ grep -c 'openat(' trace.txt
+31
+```
+
+`ls -l` makes 31 calls of `openat`. To check the number I used the summary table of strace, which counts every kind of call separately:
+
+```
+$ strace -c -f ls -l > /dev/null
+% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ------------------
+ 23.21    0.004193         155        27           mmap
+ 17.98    0.003248         104        31         1 openat
+ 10.48    0.001893          94        20           read
+  7.80    0.001408        1408         1           execve
+  6.81    0.001230          36        34           close
+  5.89    0.001064          31        34           getdents64
+  ...
+  0.78    0.000141         141         1           write
+  ...
+------ ----------- ----------- --------- --------- ------------------
+100.00    0.018062          66       270        13 total
+```
+
+(Only the first rows and the `write` row are shown; the full table has 35 kinds of calls.) The `openat` row says 31 calls, the same as my `grep`. The 1 in the `errors` column is the `ENOENT` seen in Part 1 (the missing `ls/en-US.ftl` file); a failed call is still a call, so it is counted. In total `ls -l` makes 270 calls, so `openat` is about 11.5% of them (31 of 270). The most frequent kinds are `close` and `getdents64` (34 each), then `openat` (31) and `mmap` (27). The `write` row confirms Part 1: the whole listing is printed with a single `write`.
+
+### Comparing two commands
+
+I counted `openat` for the long and the short form of the command:
+
+```
+$ strace -f -e trace=openat -o t1.txt ls -l > /dev/null
+$ strace -f -e trace=openat -o t2.txt ls > /dev/null
+$ grep -c 'openat(' t1.txt t2.txt
+t1.txt:31
+t2.txt:11
+```
+
+Plain `ls` makes 11 `openat` calls and `ls -l` makes 31, so the option `-l` costs 20 more. Looking at the trace of Part 1, the 11 calls of plain `ls` are the setup: 6 for the shared libraries, `/proc/filesystems`, `/proc/self/maps`, the two `.ftl` message files, and the directory `.` itself. The extra 20 come only from `-l`: `/etc/nsswitch.conf`, `/etc/passwd` and `/etc/group` (to turn the user and group numbers into names), and 17 calls on `/usr/share/zoneinfo` (its subdirectories and `Etc/UTC`), used to print the dates in the local time zone.
+
+### Observe
+
+**Why is counting one kind of call better than counting all of them?**
+The total (288 lines in Part 1, 270 calls in `strace -c`) only says that the command is busy; it does not say what it is doing. One kind of call answers a precise question: how many files does the command open? And comparing the same count for two commands (31 against 11) shows exactly what an option changes.
+
+---
+
+## 5. Conclusion
+
+In this lab I watched the boundary between a program and the kernel with `strace`. For a real command (`ls -l`) I saw that about 270 system calls are made (288 lines of trace), most of them just loading libraries, and that the screen output is a single `write` to descriptor 1. With my own program I saw how C calls become system calls: `open` is implemented as `openat`, `write`, `read` and `close` keep their names, and `printf` is a `write(1, ...)` underneath.
 
 The numbers returned by the kernel explain the behaviour of the program. Descriptors 0, 1 and 2 (stdin, stdout, stderr) are inherited from the shell, so the first file gets 3, and a closed number is reused by the next `open`. A failed call (like the `ENOENT` of `ls`) returns -1, and it is the program that decides what to do next.
+
+Finally, I counted one kind of call instead of all of them: `ls -l` makes 31 `openat` calls (confirmed by `strace -c`), while plain `ls` makes 11. The difference of 20 is exactly the files that `-l` needs to open to print user names, group names and local dates.
