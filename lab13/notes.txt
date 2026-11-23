@@ -1,0 +1,31 @@
+Lab 13 - Observe
+
+1. Without the lock the letters mix because every letter is a separate
+   write(1, p, 1) system call. One line of 30 letters plus the newline
+   costs 31 system calls. make qemu runs 3 CPUs, so both processes run
+   truly in parallel, and the kernel can serve a write from the other
+   process between any two of those calls. Nothing makes the 31 writes
+   of a line indivisible.
+
+2. The two lines are sem_down(3); (before the loop that writes the
+   letters) and sem_up(3); (after it), both inside if (uselock).
+   Semaphore 3 starts at 1, so only one process can be between them at
+   a time. The whole line is written before the other process can start
+   its line.
+
+3. A woken process is not guaranteed to get the unit. sem_up wakes
+   everyone sleeping on that semaphore, and another process can run
+   first and do s->value--, so the value is 0 again when the first one
+   gets the spinlock back. With "while" the process checks the value
+   again after every wakeup and goes back to sleep if it is still 0.
+   With "if" it would continue and make the value negative. A wakeup
+   can also come from kill, not only from sem_up.
+
+4. sem_up needs the same spinlock to change the value. If sem_down slept
+   holding it, sem_up would spin forever waiting for a lock held by a
+   sleeping process, and that process can only wake up after sem_up
+   runs: deadlock. A spinlock also keeps interrupts off on that CPU, so
+   sleeping with it held would freeze that CPU. That is why sem_down
+   does sleep_prepare(s), release, sleep(): the process is already
+   registered as waiting before the lock is released, so a sem_up that
+   comes in between is not lost and sleep() returns at once.
